@@ -178,7 +178,7 @@ class SOM_EN:
         # 0: prevotella, 1: bacteroids, 2: ruminoccocus in case of Enterotypes
         arr = np.array(df.iloc[:,[0,1,5]])
         
-        labels = [np.argmax(i) for i in arr]
+        labels = [np.argmax(i) for i in arr]  # taking the maximum as a class label for enterotypes otherwise provided by user
         df["class"]=labels
         
         df_75 = df.sample(frac = 0.75)
@@ -190,8 +190,19 @@ class SOM_EN:
         df_25 = df_25.iloc[:,:-1]
         return df, np.array(df_75), np.array(df_25), labels_75
     
-    '''this function calculates the representative node from each of the clusters sample data points'''
+  
     def represen_node_label(self, df, label, som):
+        
+        
+        """This function calculates the representative node from each of the clusters sample data points basically 
+           the mathematically mean or centre of each node for a particular class
+           PARAMS :
+           df -> entire dataset passed
+           label -> class or cluster which representative node is to be calculated
+           som -> the som object in which weight initialization and paramters are trained
+           
+        """
+        
         # here data is the dataframe
         df_ = np.array(df[df["class"]==label].iloc[:,:-1])
         final_dict, dict = {}, {}
@@ -222,9 +233,17 @@ class SOM_EN:
                 res= j
         return res
     
-    '''this function plots the nodes on the kohonen map, representing the wide distribution of nodes 
-        into the respective clusters'''
+    
     def plot_som(self, som, df_75, target):
+        
+        '''This function plots the nodes on the kohonen map, representing the wide distribution of nodes 
+        into the respective clusters
+        PARAMS : 
+        som -> som object in which weight initialization and paramters are trained
+        df_75 -> train dataset
+        target -> class array
+        
+        '''
         plt.figure(figsize=(9,9))
         plt.pcolor(som.distance_map().T, cmap='bone_r')  # plotting the distance map as background
         plt.colorbar()
@@ -238,8 +257,17 @@ class SOM_EN:
 
         plt.show()
         
-    '''this function gives the node with the cluster of the respective sample which hits that node'''
+    
     def getting_labels(self, df, som):
+        
+        """This function gives the mapping of each node with the cluster of the respective sample
+           which hits that node
+           PARAMS :
+           df -> the entire dataset
+           som -> som object in which weight initialization and paramters are trained
+           
+        """
+        
         dict = {}
         for label in range(3):
             df_ = np.array(df[df["class"]==label].iloc[:,:-1])
@@ -253,9 +281,18 @@ class SOM_EN:
                     dict[(w[0], w[1])] = [label]
         return dict
 
-    '''this function gives the confidence score for that respective sample, 
-         to belong to the respective cluster (it ranges b/w 0 to 1)'''
+    
     def getting_confidence_score(self, representative_nodes, dict_, label_cnt, df):
+        
+        '''This function gives the confidence score for that respective sample, 
+         to belong to the respective cluster (it ranges b/w 0 to 1)
+         PARAMS :
+         representative_nodes -> calculated from the function represen_node_label
+         dict_ -> It is a mapping for each node which class training datasets have found hit
+         label_cnt -> Calculated from the function get_label_count
+         df -> entered dataframe 
+         '''
+        
         node_cnf={}
         conf_0, conf_1, conf_2=[], [], []
         test_df ={"conf_0":conf_0 ,"conf_1":conf_1,"conf_2":conf_2}#,"actual_label":df['class']}
@@ -285,6 +322,7 @@ class SOM_EN:
                 node_cnf[node]=final_ans
 
         dff = np.array(df.iloc[:, :-1])
+        
         for i in dff:
             win_node = som.winner(i)
             conf= node_cnf[win_node]
@@ -297,6 +335,15 @@ class SOM_EN:
         return self.test_df
     
     def most_representative(self, df_25, cluster, top_n):
+        
+        """This function calculates the most important or contributing 
+           features in creating seperable clusters 
+           PARAMS : 
+           df_25 -> test dataset
+           cluster -> class in which contributing features are to be calculated
+           top_n -> top n most contributing features
+           
+        """
         ind=[]
         for i in range(len(self.test_df)):
             if test_df.iloc[i,cluster]==max(self.test_df.iloc[i,0], self.test_df.iloc[i,1], self.test_df.iloc[i,2]):
@@ -312,7 +359,18 @@ class SOM_EN:
 #         print(sorted_d)
         return list(d.keys())[::-1][:top_n]
 
-    def plot_winner(self, a, som, df_75, target):
+    def highlight_winner(self, a, som, df_75, target):
+        
+        """ Plotting the winner node in a map where each winner node is
+            highlighted in respective colors
+            PARAMS :
+            a -> array which winner node is to be highlited
+            som -> som object in which weight initialization and paramters are trained
+            df_75 -> train dataset
+            target -> class array
+            
+        """ 
+        
         plt.figure(figsize=(9,9))
     #     bone()
         plt.pcolor(som.distance_map().T, cmap='bone_r')  # plotting the distance map as background
@@ -330,6 +388,15 @@ class SOM_EN:
         plt.show()
         
     def marginal(self, marginal, data, neurons):
+        
+        """ This function plots the comparitve marginal density function of 
+            both map weights after training and data to see how well our 
+            map has covered the dataset.
+            PARAMS: 
+            marginal : the feature whose plot is to be plotted. 
+            data -> dataset entered 
+            neurons -> weights of the som object """ 
+        
         # check if the second argument is of type character
         if type(marginal) == str and marginal in list(data):
 
