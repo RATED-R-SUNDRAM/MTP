@@ -1,39 +1,61 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+#IMPORTED REQUIREED LIBRARIES AND PACKAGES
 
-
-#IMPORTS
 from sklearn import datasets
 import pandas as pd 
 import numpy as np
 import matplotlib.pyplot as plt
 get_ipython().run_line_magic('matplotlib', 'inline')
+from sklearn.metrics.pairwise import euclidean_distances
 from minisom import MiniSom
 from hyperopt import Trials , STATUS_OK ,fmin, tpe, hp
 from statistics import mode
 
 
-# In[10]:
+# MAIN CLASS FUNCTION NAMED SOM_EN
 
-
-class solver:
+class SOM_EN:
+    
+    
     def __init__(self, som_grid_rows, som_grid_columns, sigma, iterations, learning_rate):
+        """ INITIALIZATION OF SOM PARAMAETERS 
+         * som_grid_rows , som_grid_columns -> the map dimensions
+         * sigma -> the initial spread of the gaussian neighbourhood function
+         * learning_rate -> factor with which the weight updation is done
+         * iteration -> The number of times the entire dataset is passed through the training process
+         """ 
+        
         self.som_grid_rows = som_grid_rows
         self.som_grid_columns = som_grid_columns
         self.sigma = sigma
         self.iterations = iterations
         self.learning_rate = learning_rate
+        
     
-    '''to find the distance between two points in space'''
+    '''Helper functions to be used in other main fuctions'''
+    
     def dist(self, a, b):
+        """ Func for euclidean distance of 2 arrays a and b""" 
+        
         ans=0
         for i in range(len(a)):
             ans+= (a[i]-b[i])**2 
         return ans**0.5
     
-    def score(self, node, label, dict_, label_cnt):
+    def score(self, node, label, dict_, label_cnt): 
+        
+        """ This functon is used to to provide score to each node in
+            the map by taking in the below paramaters 
+            PARAMS: 
+            
+            * node -> A particular node's cordinate (x,y)
+            * label -> confidence score for a particular class
+            * dict_ -> It is a mapping for each node which class training datasets have found hit
+            * label_cnt -> Count of nodes hit by each class during training
+            """ 
+        
         arr = [[self.dist(i, node), mode(dict_[i])] for i in dict_]
         arr.sort(key=lambda x :x[0])
         constant = 0.001
@@ -47,6 +69,12 @@ class solver:
         return (sumi/label_cnt[label])+constant
     
     def get_label_count(self, dict_):
+        
+        """ Function to calculate the label_cnt dictionary in score function
+            PARAMS :
+             * dict_ ->It is a mapping for each node which class training datasets have found hit
+         """
+        
         label_cnt = {}
         for i in dict_:
             mode_ =  mode(dict_[i])
@@ -56,24 +84,43 @@ class solver:
                 label_cnt[mode_]=1
         return label_cnt
     
-    '''this tunes the weights of our som, 
-        returning the best sigma and learning rates received after quantization'''
+    
     def tuning(self, df_75):
+        
+        
+        '''This function tunes the Hyperparameters of our som, 
+        returning the best sigma and learning rates received after optimization
+          PARAMS : 
+          * df_75 -> train dataset on which the optimization on search space takes place
+        '''
+        
+        
         space = {
+            
+            # the space in which we are looking to acheive the optimal values of hyperparameters
+            
             "sig": hp.uniform("sig",0.001,5),
             "learning_rate" : hp.uniform("learning_rate",0.001,5)
         }
+        
         def som_fn(space):
             sig = space["sig"]
             learning_rate = space["learning_rate"]
-            val = MiniSom (x=self.som_grid_rows ,
+            val = MiniSom (
+                
+                           # As entered by user while creating the object
+                
+                           x=self.som_grid_rows ,
                            y=self.som_grid_columns, 
                            input_len = df_75.shape[1],
                            sigma =self.sigma,
                            learning_rate = self.learning_rate
-                          ).quantization_error(df_75)
-            print(val)
+                          ).quantization_error(df_75)          # the optimization is on a loss/error function
+                                                               # In this case it is quantization error
+            #print(val)
             return {'loss':val , 'status':STATUS_OK}
+        
+        # optimizing in the search space and on the loss function defined
         som_fn(space)
         trials = Trials()
         best = fmin(
@@ -83,29 +130,52 @@ class solver:
                 max_evals = 1000,
                 trials =trials
         )
-        sigma = best["sig"]
-        learning_rate = best["learning_rate"]
+        
+        sigma = best["sig"]   # optimized / tuned hyperparameter sigma 
+        learning_rate = best["learning_rate"]  # optimized /tuned hyperparameter learning_rate
         return sigma, learning_rate
-#         print(f"x :{x}\ny : {y}\nsigma :{sigma}\nlearning_rate :{learning_rate}")
+#       print(f"x :{x}\ny : {y}\nsigma :{sigma}\nlearning_rate :{learning_rate}")
     
-    '''this function randomly intitializes the weights of som, 
-        based on the characteristics provided by the user'''
+    
+
     def train_som(self, df_75):
-        som = MiniSom(x = som_grid_rows, 
-              y = som_grid_columns,
+        
+        """ This function calls the training of som by randomly intitializing the weights of som, 
+        based on the parameters provided by the user .
+        PARAMS :
+        df_75 -> dataset upon which the training is done.
+        """
+        
+        som = MiniSom(
+              
+              # As entered by user while creating the object
+            
+              x = som_grid_rows,    
+              y = som_grid_columns,         
               input_len = df_75.shape[1],
               sigma = self.sigma, 
               learning_rate = self.learning_rate)
-        som.random_weights_init(df_75)
+        
+        som.random_weights_init(df_75)   # random weight initialization 
 
-        som.train_random(df_75, self.iterations)
+        som.train_random(df_75, self.iterations) 
         return som
       
-    '''this loads the dataset from the csv file and returns the numpy array after sampling the 25% of the data'''
+   
     def load_dataset(self, path):
+        
+        """ The whole pipeline of this class uses numpy arrays inplace of dataframe so this
+            function after taking input from user in form of dataframe converts to numpy
+            array and also does train - test split
+            PARAMS : 
+            path -> path of the csv file
+            
+            
+        """
+            
         df = pd.read_csv(path)
         df=df.iloc[:,1:]
-        # 0: prevotella, 1: bacteroids, 2: ruminoccocus
+        # 0: prevotella, 1: bacteroids, 2: ruminoccocus in case of Enterotypes
         arr = np.array(df.iloc[:,[0,1,5]])
         
         labels = [np.argmax(i) for i in arr]
@@ -281,113 +351,6 @@ class solver:
             plt.show()
 
 
-# In[11]:
-
-
-som_grid_rows = 7
-som_grid_columns = 7
-sigma = 1
-iterations = 1000
-learning_rate = 0.5
-
-
-# In[12]:
-
-
-s = solver(som_grid_rows, som_grid_columns, sigma, iterations, learning_rate)
-path = '../METAHIT.csv'
-df, df_75, df_25, target = s.load_dataset(path)
-df.head()
-
-
-# In[13]:
-
-
-# train som model (som_grid_rows, som_grid_columns, sigma, iterations, learning_rate)
-som = s.train_som(df_75)
-s.plot_som(som, df_75, target)     #  (som, df_75, target)
-
-
-# In[14]:
-
-
-# tuning (x, y, input_len)
-sigma, learning_rate = s.tuning(df_75)
-
-
-# In[15]:
-
-
-som = s.train_som(df_75)
-s.plot_som(som, df_75, target)
-
-
-# In[16]:
-
-
-# getting representative nodes
-representative_nodes = [s.represen_node_label(df, i, som) for i in range(0,3)]
-
-
-# In[ ]:
-
-
-
-
-
-# In[17]:
-
-
-# getting labels
-dict_ = s.getting_labels(df, som)
-label_cnt = s.get_label_count(dict_)
-
-
-# In[18]:
-
-
-print(label_cnt)
-
-
-# In[19]:
-
-
-# print confidence score (representative_nodes, dict_, label_cnt)
-conf_scores = s.getting_confidence_score(representative_nodes, dict_,label_cnt,df)
-print(conf_scores)
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
 
 
 
