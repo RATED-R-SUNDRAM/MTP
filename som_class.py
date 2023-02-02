@@ -12,6 +12,7 @@ from sklearn.metrics.pairwise import euclidean_distances
 from minisom import MiniSom
 from hyperopt import Trials , STATUS_OK ,fmin, tpe, hp
 from statistics import mode
+import seaborn as sns
 
 
 
@@ -42,6 +43,7 @@ class SOM_EN:
         self.som = None
         self.dict=None 
         self.label_cnt = None
+        self.conf_df = None
         
         
     '''Helper functions to be used in other main fuctions'''
@@ -58,7 +60,7 @@ class SOM_EN:
         
         """ This functon is used to to provide score to each node in
             the map by taking in the below paramaters 
-            PARAMS: 
+            REQUIRED  : : 
             
             * node -> A particular node's cordinate (x,y)
             * label -> confidence score for a particular class
@@ -85,7 +87,7 @@ class SOM_EN:
     def get_label_count(self):
         
         """ Function to calculate the label_cnt dictionary in score function
-            PARAMS :
+            REQUIRED  :  :
              * dict_ ->It is a mapping for each node which class training datasets have found hit
          """
         dict_= self.dict
@@ -105,7 +107,7 @@ class SOM_EN:
         
         """This function gives the mapping of each node with the cluster of the respective sample
            which hits that node
-           PARAMS :
+           REQUIRED  :  :
            df -> the entire dataset
            som -> som object in which weight initialization and paramters are trained
            
@@ -135,7 +137,7 @@ class SOM_EN:
         
         '''This function tunes the Hyperparameters of our som, 
         returning the best sigma and learning rates received after optimization
-          PARAMS : 
+          REQUIRED  :  : 
           * df_75 -> train dataset on which the optimization on search space takes place
         '''
         
@@ -188,7 +190,7 @@ class SOM_EN:
         
         """ This function calls the training of som by randomly intitializing the weights of som, 
         based on the parameters provided by the user .
-        PARAMS :
+        REQUIRED  :  :
         df_75 -> dataset upon which the training is done.
         """
         
@@ -214,7 +216,7 @@ class SOM_EN:
         """ The whole pipeline of this class uses numpy arrays inplace of dataframe so this
             function after taking input from user in form of dataframe converts to numpy
             array and also does train - test split
-            PARAMS : 
+            REQUIRED  :  : 
             path -> path of the csv file
             labels_present - > if lables are present or not
             
@@ -265,7 +267,7 @@ class SOM_EN:
         
         """This function calculates the representative node from each of the clusters sample data points basically 
            the mathematically mean or centre of each node for a particular class
-           PARAMS :
+           REQUIRED  :  :
            df -> entire dataset passed
            label -> class or cluster which representative node is to be calculated
            som -> the som object in which weight initialization and paramters are trained
@@ -309,7 +311,7 @@ class SOM_EN:
         
         '''This function plots the nodes on the kohonen map, representing the wide distribution of nodes 
         into the respective clusters
-        PARAMS : 
+        REQUIRED  :  : 
         som -> som object in which weight initialization and paramters are trained
         df_75 -> train dataset
         target -> class array
@@ -339,7 +341,7 @@ class SOM_EN:
         
         '''This function gives the confidence score for that respective sample, 
          to belong to the respective cluster (it ranges b/w 0 to 1)
-         PARAMS :
+         REQUIRED  :  :
          representative_nodes -> calculated from the function representative_node_label
          dict_ -> It is a mapping for each node which class training datasets have found hit
          label_cnt -> Calculated from the function get_label_count
@@ -386,9 +388,9 @@ class SOM_EN:
             conf_1.append(round(conf[1], 3))
             conf_2.append(round(conf[2], 3))
         
-        self.test_df=pd.DataFrame(test_df)
+        self.conf_df=pd.DataFrame(test_df)
         
-        return self.test_df
+        return self.conf_df
     
     def run(self):
         
@@ -396,42 +398,48 @@ class SOM_EN:
         self.get_label_count()
     
     
-    def most_representative(self, df_25, cluster, top_n):
+    def most_representative(self,cluster, top_n):
         
         """This function calculates the most important or contributing 
            features in creating seperable clusters 
-           PARAMS : 
+           REQUIRED  :  : 
            df_25 -> test dataset
            cluster -> class in which contributing features are to be calculated
            top_n -> top n most contributing features
            
         """
+        test_df = self.conf_df
+        df_25 = self.df_25
+        
         ind=[]
-        for i in range(len(self.test_df)):
-            if test_df.iloc[i,cluster]==max(self.test_df.iloc[i,0], self.test_df.iloc[i,1], self.test_df.iloc[i,2]):
+        for i in range(len(test_df)):
+            if test_df.iloc[i,cluster]==max(test_df.iloc[i,0],test_df.iloc[i,1],test_df.iloc[i,2]):
                 ind.append(i)
         df_ = df_25[ind,:]
         d={}
         for i in range(df_25.shape[1]):
             temp = df_[:,i]
             d[i]=np.var(temp)
-#         print(d)
+        #print(d)
         sorted_d = sorted(d.items(), key=lambda x:x[1])
         sorted_d = dict(sorted_d)
-#         print(sorted_d)
+        #print(sorted_d)
         return list(d.keys())[::-1][:top_n]
 
-    def highlight_winner(self, a, som, df_75, target):
+    def highlight_winner(self, a):
         
         """ Plotting the winner node in a map where each winner node is
             highlighted in respective colors
-            PARAMS :
+            REQUIRED  :  :
             a -> array which winner node is to be highlited
             som -> som object in which weight initialization and paramters are trained
             df_75 -> train dataset
             target -> class array
             
         """ 
+        som = self.som
+        df_75 = self.df_75 
+        target= self.labels_75
         
         plt.figure(figsize=(9,9))
     #     bone()
@@ -449,15 +457,18 @@ class SOM_EN:
         plt.plot(w[0]+0.5,w[1]+0.5,"X",markerfacecolor='YELLOW',markeredgecolor="YELLOW", markersize=50, markeredgewidth=2)
         plt.show()
         
-    def marginal(self, marginal, data, neurons):
+    def marginal(self, marginal):
         
         """ This function plots the comparitve marginal density function of 
             both map weights after training and data to see how well our 
             map has covered the dataset.
-            PARAMS: 
+            REQUIRED  : : 
             marginal : the feature whose plot is to be plotted. 
             data -> dataset entered 
             neurons -> weights of the som object """ 
+        
+        data = self.df
+        neurons = self.som._weights
         
         # check if the second argument is of type character
         if type(marginal) == str and marginal in list(data):
