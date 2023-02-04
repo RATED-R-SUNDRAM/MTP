@@ -1,4 +1,4 @@
-# MTP
+# Steps to install and run our ENsom model.
 1. Open the dist folder and type the command. This installs the required class with the respective functions in our distro.
 ```
   pip3 install ENsom-0.1.tar.gz .
