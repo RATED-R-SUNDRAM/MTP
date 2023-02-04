@@ -1,0 +1,8 @@
+LICENSE.txt
+setup.py
+ENsom/__init__.py
+ENsom/som_class.py
+ENsom.egg-info/PKG-INFO
+ENsom.egg-info/SOURCES.txt
+ENsom.egg-info/dependency_links.txt
+ENsom.egg-info/top_level.txt
