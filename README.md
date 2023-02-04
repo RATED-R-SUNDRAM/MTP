@@ -1,8 +1,8 @@
 # Steps to install and run our ENsom model.
-1. Download the mypackage folder.
-2. Open the mypackage/dist/ folder and type the command. This installs the required class with the respective functions in our distro.
+1. Download/clone the mypackage folder locally .
+2. Open the mypackage/dist/ folder and type the below command. This installs the required class with the respective functions in our distro.
 ```
-  pip3 install ENsom-0.1.tar.gz .
+  #pip3 install ENsom-0.1.tar.gz .
 ```
 3. Then you can easily open any python file and import the class from it.
 ```
