@@ -1,9 +1,9 @@
 # MTP
-1. Open the dist folder and type the command 
+1. Open the dist folder and type the command. This installs the required class with the respective functions in our distro.
 ```
   pip3 install ENsom-0.1.tar.gz .
 ```
-2. It's installed. Then you can easily open any python file and import the class from it.
+2. Then you can easily open any python file and import the class from it.
 ```
   # import the class with all its functions
   from ENsom.som_class import *
